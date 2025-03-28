@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MoetKorter.nl</title>
+    <link rel="stylesheet" href="./styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:ital,wght@0,300..900;1,300..900&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <main class="main" id="main">
+        <div class="api-key-container">
+            <label class="api-key-label" for="api-key">
+                <p class="api-key-label-text">API key
+                    <span class="tooltip">ℹ️ <span class="tooltiptext">Je hebt een OpenAI API-key nodig om deze app te
+                            gebruiken. Je kunt er een
+                            aanvragen op de OpenAI-website.
+                        </span></span>
+
+                </p>
+                <input type="text" id="api-key" class="api-key-input" maxlength="200"></input>
+                <button class="api-key-button" role="button" id="save-key-button">opslaan</button>
+            </label>
+        </div>
+        <label for="prompt">
+            <h1>MoetKorter.nl</h1>
+            <textarea id="prompt" rows="4" maxlength="140"
+                placeholder="Klik op het mandje voor een veel kortere uitleg dan hier zou staan omschreven."></textarea>
+        </label>
+        <button id="submit" onclick="shortenText()" aria-label="Verkort de tekst" role="button" class="submit-button">
+            <img src="./images/mandje.jpg" alt="" class="mandje">
+        </button>
+        <div class="mand-meneer-container">
+            <div class="mand-meneer">
+                <p id="output" class="output"></p>
+                <img class="mand-meneer-image" src="./images/mand.png" alt="">
+            </div>
+        </div>
+    </main>
+</body>
+
+<script>
+    const mainContainer = document.getElementById("main");
+    const apiKeyInput = document.getElementById("api-key");
+    const saveKeyButton = document.getElementById("save-key-button");
+    const textInput = document.getElementById("prompt");
+    const output = document.getElementById("output");
+
+    const apiKeyFromParams = new URLSearchParams(window.location.search).get("api-key");
+    let hasKey = !!apiKeyFromParams;
+
+
+    if (apiKeyFromParams) {
+        apiKeyInput.value = apiKeyFromParams;
+        localStorage.setItem("apiKey", apiKeyFromParams);
+    } else {
+        // Load the saved API key from local storage
+        const savedApiKey = localStorage.getItem("apiKey");
+        if (savedApiKey) {
+            apiKeyInput.value = savedApiKey;
+
+            // update the URL with stored API key
+            const url = new URL(window.location.href);
+            url.searchParams.set("api-key", savedApiKey);
+            window.history.replaceState({}, '', url);
+            hasKey = true;
+        }
+    }
+
+    // Enable the save button only if the input is not empty
+    saveKeyButton.disabled = !apiKeyInput.value;
+    apiKeyInput.addEventListener("input", function () {
+        console.log("🐟 ~ apiKeyInput:", apiKeyInput.value)
+        saveKeyButton.disabled = !apiKeyInput.value;
+    });
+
+    // Save the API key to local storage when the input changes
+    saveKeyButton.addEventListener("click", function () {
+        localStorage.setItem("apiKey", apiKeyInput.value);
+        // update the URL with the new API key
+        const url = new URL(window.location.href);
+        url.searchParams.set("api-key", apiKeyInput.value);
+        window.history.replaceState({}, '', url);
+        hasKey = true;
+        mainContainer.classList.add("has-key");
+    });
+
+    textInput.addEventListener("input", function () {
+        if (textInput.value) {
+            mainContainer.classList.add("has-text");
+        } else {
+            mainContainer.classList.remove("has-text");
+        }
+    });
+
+    if (hasKey) mainContainer.classList.add("has-key");
+
+    async function shortenText() {
+
+        const apiKey = apiKeyInput.value;
+        let text = textInput.value;
+
+        if (!apiKey) {
+            alert("Voer je OpenAI API-key in!");
+            return;
+        }
+
+        if (!text) text = "Als je op het mandje klikt, wordt je tekst ingekort.";
+
+        try {
+            const response = await fetch("https://api.openai.com/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    model: "gpt-4o-mini",
+                    messages: [{ "role": "user", "content": `Verkort deze zin zo veel mogelijk. Houd maximaal 5 woorden over: ${text}` }]
+                })
+            });
+
+            const data = await response.json();
+            if (data.choices) {
+                output.innerText = data.choices[0].message.content;
+                mainContainer.classList.remove("has-text");
+                mainContainer.classList.add("has-output");
+            } else {
+                output.innerText = "Fout: " + JSON.stringify(data);
+            }
+        } catch (error) {
+            output.innerText = "Fout bij het ophalen van data.";
+        }
+    }
+</script>
+
+</html>
