@@ -166,7 +166,7 @@ textarea::placeholder {
 
 .mand-meneer {
     width: 100vw;
-    max-width: 400px;
+    max-width: 300px;
     position: absolute;
     bottom: 0;
     transform: translateY(100%);
